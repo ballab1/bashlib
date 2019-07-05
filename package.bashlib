@@ -1,10 +1,11 @@
 #!/bin/bash
-#############################################################################
+
+#----------------------------------------------------------------------------------------------
 #
 #   package.bashlib: get OS packages
 #
-#############################################################################
 
+#----------------------------------------------------------------------------------------------
 function package.checkPackages()
 {
     local -ar pkgs=( $@ )
@@ -12,7 +13,7 @@ function package.checkPackages()
     case "$( environ.OSid )" in
         alpine)
             local -a duplicates=( $(lib.intersect "${pkgs[*]}" "$( apk info )") )
-            [ ${#duplicates[*]} -eq 0 ] || trap.die "attempting to reinstall following packages: '${duplicates[*]}'"
+            [ ${#duplicates[*]} -eq 0 ] || trap.warn "attempting to reinstall following packages: '${duplicates[*]}'"
             # now verify that packages are actually valid for installation
             for pkg in "${pkgs[@]}"; do
                 apk info "${pkg%%=*}" &>/dev/null || trap.die "Package $pkg not found"
@@ -20,7 +21,7 @@ function package.checkPackages()
             ;;
         centos|fedora)
             local -a duplicates=( $(for pkg in "${pkgs[@]}"; do yum -q list installed "$pkg" 2>/dev/null | awk 'NR>1 {print $1}' ||:; done) )
-            [ ${#duplicates[*]} -eq 0 ] || trap.die "attempting to reinstall following packages: '${duplicates[*]}'"
+            [ ${#duplicates[*]} -eq 0 ] || trap.warn "attempting to reinstall following packages: '${duplicates[*]}'"
             # now verify that packages are actually valid for installation
             for pkg in "${pkgs[@]}"; do
                 yum search "$pkg" &>/dev/null || trap.die "Package $pkg not found"
@@ -28,7 +29,7 @@ function package.checkPackages()
             ;;
         ubuntu)
             local -a duplicates=( $(lib.intersect "${pkgs[*]}" "$( dpkg --get-selections | awk '{print $1}' )") )
-            [ ${#duplicates[*]} -eq 0 ] || trap.die "attempting to reinstall following packages: '${duplicates[*]}'"
+            [ ${#duplicates[*]} -eq 0 ] || trap.warn "attempting to reinstall following packages: '${duplicates[*]}'"
             # now verify that packages are actually valid for installation
             for pkg in "${pkgs[@]}"; do
                 apt search "$pkg" &>/dev/null || trap.die "Package $pkg not found"
@@ -38,7 +39,7 @@ function package.checkPackages()
 }
 export -f package.checkPackages
 
-#############################################################################
+#----------------------------------------------------------------------------------------------
 function package.install()
 {
     local -r defnFile=${1:?"Input parameter 'defnFile' must be passed to 'function ${FUNCNAME[0]}()'"}
@@ -67,7 +68,7 @@ function package.install()
 }
 export -f package.install
 
-#############################################################################
+#----------------------------------------------------------------------------------------------
 function package.installTimezone()
 {
     local -r tz=${1:?"Input parameter 'tz' must be passed to 'function ${FUNCNAME[0]}()'"}
@@ -90,7 +91,7 @@ function package.installTimezone()
 }
 export -f package.installTimezone
 
-#############################################################################
+#----------------------------------------------------------------------------------------------
 function package.runScripts()
 {
     local -a files=( "$@" )
@@ -101,7 +102,7 @@ function package.runScripts()
 }
 export -f package.runScripts
 
-#############################################################################
+#----------------------------------------------------------------------------------------------
 function package.updateIndexes()
 {
     case "$( environ.OSid )" in
