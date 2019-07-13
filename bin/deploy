@@ -175,8 +175,9 @@ function deploy.containerTag()
 {
     local -r container_tag=${1:-}
 
-    case $(git.branch) in
-        dev)                       echo 'dev';;
+    local branch="$(git.branch)"
+    case "$branch" in
+        dev*)                      echo "$branch";;
         master|integration)        echo "$container_tag";;
         *)                         echo 'latest';;
     esac
@@ -738,7 +739,7 @@ function deploy.updateDockerCompose()
             fi
 
             # process line
-            if ! "$process" "$line" "$service" "${args[@]}"; then
+            if ! "$process" "$line" "$service" "${args[@]:-}"; then
                 term.elog "Failed to process $line"'\n' 'warn'
                 break
             fi
