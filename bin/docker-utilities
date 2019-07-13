@@ -57,14 +57,14 @@ Usage:
         rename            Rename an image
         report            Generate a report of contents of the registry
               --catalog     : show the registry catalog (as text)
-              --format      : format output as JSON|TEXT 
+              --format      : format output as JSON|TEXT
               --output      : name of file to output <filename>
-              --tags        : show the tags associated with a repository (as text) 
-              --tag-summary : show a summary of tag usage for specified repos 
+              --tags        : show the tags associated with a repository (as text)
+              --tag-summary : show a summary of tag usage for specified repos
         tag               Delete one or more tags - see 'usage examples'
               --allRepos    : delete tag in all repos matching <regex>:tag
 
-    all registry references '$(registry.SERVER)' are automatically stripped from images and/or repos 
+    all registry references '$(registry.SERVER)' are automatically stripped from images and/or repos
 
     Usage examples:......................................................................|....................................................................................
         delete :  delete one or more images and/or repos by specifying <regex>:<regex>   |   rename : rename an image
@@ -78,7 +78,7 @@ Usage:
               delete images in all repos matching *:tag                                  |      delete tag in all repos
             delete a range of images in a repo by specifying "max # images"              |
             delete a range of images in a repo by specifying "max # images" + keepTags   |   pushImage : push a retained image
-            delete a range of images in a repo by specifying [start]< createTime >[end]  |      
+            delete a range of images in a repo by specifying [start]< createTime >[end]  |
                                                                                          |   curation : remove unused images from prior versions
                                                                                          |
 
@@ -297,7 +297,7 @@ function docker-utilities.addImageToList()
 {
     local name=${1:?}
     local tags=${2:?}
-    
+
     if [ "${IMAGES_TO_DELETE[$name]:-}" ]; then
         IMAGES_TO_DELETE[$name]+=( "$tags" )
     else
@@ -357,7 +357,7 @@ function docker-utilities.delete()
 
     local digest
     local -A digests
-    
+
 
     eval "digests=( $(docker-utilities.digests "$image" 'notimes' | jq -r '.[]|.tags|=join(",")|"[\(.digest)]=\(.tags)"') )"
     [ "${#digests[*]}" -le 0 ] && continue
@@ -519,7 +519,7 @@ function docker-utilities.digests()
 #----------------------------------------------------------------------------------------------
 function docker-utilities.formatTextReport()
 {
-    local -r TOOLS="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" 
+    local -r TOOLS="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
     docker run --rm \
                --volume "$TOOLS":/home/groovy/scripts \
@@ -527,7 +527,7 @@ function docker-utilities.formatTextReport()
                -e "JSON=/tmp/reportCatalog.json" \
                --workdir /home/groovy/scripts \
                "$(registry.SERVER)alpine/groovy:2.6-jre" \
-               groovy registryReport.groovy  
+               groovy registryReport.groovy
 }
 
 #----------------------------------------------------------------------------------------------
@@ -538,7 +538,7 @@ function docker-utilities.getImage()
 
     local -i status=0
 
-    
+
     if [ -z "$(docker image ls -q $image)" ]; then
         docker pull "$image" || status=$?
         [ $status -ne 0 ] && return $status
@@ -743,7 +743,7 @@ function docker-utilities.reportTagSummary()
     fi
 }
 
-#---------------------------------------------------------------------------------------------- 
+#----------------------------------------------------------------------------------------------
 function docker-utilities.run()
 {
     [ $DEBUG -ne 0 ] && echo -e "${grey}$(printf '%s ' "$@")$reset"
