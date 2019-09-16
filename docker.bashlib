@@ -49,7 +49,7 @@ function docker.clean()
         mapfile -t collection < <(printf '%s\n' ${collection[@]} | sort -u)   # remove duplicates
 
         # Allow any images associated with running containers
-        local -r processes="$(for i in $(docker ps --all --format '{{.Image}}'); do docker inspect $i | jq -r '[.[].Id[7:19]]|unique[]' ;done)"
+        local -r processes="$(for i in $(docker ps --all --format '{{.Image}}'); do docker inspect $i 2>/dev/null | jq -r '[.[].Id[7:19]]|unique[]' ||: ;done)"
         local -i idx=${#collection[*]}
         while [ $(( idx-- )) -gt 0 ]; do
             image=${collection[$idx]}
@@ -59,7 +59,7 @@ function docker.clean()
         # Finally, remove all the images we found
         if [ "${#collection[*]}" -gt 0 ]; then
             printf "Deleting %d dangling/temporary images\n" "${#collection[*]}"
-            docker rmi ${collection[@]}
+            docker rmi ${collection[@]} ||:
         fi
     fi
 
