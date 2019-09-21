@@ -96,6 +96,16 @@ function docker.clean()
 export -f docker.clean
 
 #----------------------------------------------------------------------------------------------
+function docker.isRunning()
+{
+    if [ -S /run/docker.sock ]; then
+        curl --silent --unix-socket /run/docker.sock GET http://127.0.0.1/ping &> /dev/null && return 0
+    fi
+    return 1
+}
+export -f docker.isRunning
+
+#----------------------------------------------------------------------------------------------
 function docker.networks()
 {
     local -a networks=( $( docker network ls | grep 'default' | awk "{ print \$1 }" ) )
