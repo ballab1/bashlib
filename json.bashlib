@@ -8,7 +8,15 @@
 #----------------------------------------------------------------------------------------------
 function json.arrayValues()
 {
-    printf '"%s"\n' "$@"
+    local -ar vals=( "$@" )
+    local valStr=''
+    if [ "${#vals[@]}" -gt 0 ]; then
+        for val in "${vals[@]}"; do
+            [ -z "$valStr" ] || printf ','
+            printf '%s' "$(json.encodeValue "$val")"
+            valStr="1"
+        done
+    fi
 }
 export -f json.arrayValues
 
@@ -20,7 +28,7 @@ function json.encodeArray()
 
     [ "$name" = '--' ] || printf '"%s":' "$name"
     printf '['
-    json.streamValues "$@"
+    json.arrayValues "$@"
     printf ']'
 }
 export -f json.encodeArray
@@ -43,7 +51,14 @@ function json.encodeHash()
 
     [ "$name" = '--' ] || printf '"%s":' "$name"
     printf '{'
-    json.streamValues "$@"
+    local -A hashVals
+    eval "hashVals=( "$@" )"
+    local val valStr=''
+    for val in "${!hashVals[@]}"; do
+        [ -z "$valStr" ] || printf ','
+        json.encodeField "$val" "${!hashVals[$val]}"
+        valStr="1"
+    done
     printf '}'
 }
 export -f json.encodeHash
@@ -62,18 +77,3 @@ function json.encodeValue()
     fi
 }
 export -f json.encodeValue
-
-#----------------------------------------------------------------------------------------------
-function json.streamValues()
-{
-    local -ar vals=( "$@" )
-    local valStr=''
-    if [ "${#vals[@]}" -gt 0 ]; then
-        for val in "${vals[@]}"; do
-            [ -z "$valStr" ] || printf ','
-            printf '%s' "$val"
-            valStr="1"
-        done
-    fi
-}
-export -f json.streamValues
