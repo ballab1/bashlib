@@ -23,27 +23,49 @@ function term.__init()
 }
 
 #----------------------------------------------------------------------------------------------
+function term.codes_ATTR_RESET()
+{
+    local -r name=${1:?"Input parameter 'name' must be passed to 'function ${FUNCNAME[0]}()'"}
+
+    declare -Ax ATTR_RESET=( ['bold']=21 ['dim']=22 ['underline']=24 ['blink']=25 ['invert']=27 ['hidden']=28 ['all']=0 )
+    echo "${ATTR_RESET[$name]:-}"
+}
+
+#----------------------------------------------------------------------------------------------
+function term.codes_ATTR_SETTERS()
+{
+    local -r name=${1:?"Input parameter 'name' must be passed to 'function ${FUNCNAME[0]}()'"}
+
+    declare -Ax ATTR_SETTERS=( ['bold']=1 ['dim']=2 ['underline']=4 ['blink']=5 ['invert']=7 ['hidden']=8 )
+    echo "${ATTR_SETTERS[$name]:-}"
+}
+
+#----------------------------------------------------------------------------------------------
+function term.codes_BACKGROUND()
+{
+    local -r name=${1:?"Input parameter 'name' must be passed to 'function ${FUNCNAME[0]}()'"}
+
+    declare -Ax BACKGROUND=( ['default']=49 ['black']=40 ['red']=41 ['green']=42 ['yellow']=43 ['blue']=44 ['magenta']=45 ['cyan']=46 ['gray']=47 ['grey']=47 ['lt_gray']=47 ['lt_grey']=47 ['dk_gray']=100 ['dk_grey']=100 ['lt_red']=101 ['lt_green']=102 ['lt_yellow']=103 ['lt_blue']=104 ['lt_magenta']=105 ['lt_cyan']=106 ['white']=107 )
+    echo "${BACKGROUND[$name]:-}"
+}
+
+#----------------------------------------------------------------------------------------------
+function term.codes_FOREGROUND()
+{
+    local -r name=${1:?"Input parameter 'name' must be passed to 'function ${FUNCNAME[0]}()'"}
+
+    declare -Ax FOREGROUND=( ['black']=30 ['blue']=34 ['cyan']=36 ['default']=39 ['dk_gray']=90 ['dk_grey']=90 ['gray']=90 ['grey']=90 ['green']=32 ['lt_blue']=94 ['lt_cyan']=96 ['lt_gray']=37 ['lt_grey']=37 ['lt_green']=92 ['lt_magenta']=95 ['lt_red']=91 ['lt_yellow']=93 ['magenta']=35 ['red']=31 ['white']=97 ['yellow']=33 )
+    echo "${FOREGROUND[$name]:-}"
+}
+
+#----------------------------------------------------------------------------------------------
 function term.codes()
 {
     local -r mode=${1:?"Input parameter 'mode' must be passed to 'function ${FUNCNAME[0]}()'"}
     local -r name=${2:?"Input parameter 'code' must be passed to 'function ${FUNCNAME[0]}()'"}
 
-    local -A ATTR_RESET=( ['bold']=21 ['dim']=22 ['underline']=24 ['blink']=25 ['invert']=27 ['hidden']=28 ['all']=0 )
-    local -A ATTR_SETTERS=( ['bold']=1 ['dim']=2 ['underline']=4 ['blink']=5 ['invert']=7 ['hidden']=8 )
-    local -A BACKGROUND=( ['default']=49 ['black']=40 ['red']=41 ['green']=42 ['yellow']=43 ['blue']=44 ['magenta']=45 ['cyan']=46 ['gray']=47 ['grey']=47 ['lt_gray']=47 ['lt_grey']=47 ['dk_gray']=100 ['dk_grey']=100 ['lt_red']=101 ['lt_green']=102 ['lt_yellow']=103 ['lt_blue']=104 ['lt_magenta']=105 ['lt_cyan']=106 ['white']=107 )
-    local -A FORGROUND=( ['black']=30 ['blue']=34 ['cyan']=36 ['default']=39 ['dk_gray']=90 ['dk_grey']=90 ['gray']=90 ['grey']=90 ['green']=32 ['lt_blue']=94 ['lt_cyan']=96 ['lt_gray']=37 ['lt_grey']=37 ['lt_green']=92 ['lt_magenta']=95 ['lt_red']=91 ['lt_yellow']=93 ['magenta']=35 ['red']=31 ['white']=97 ['yellow']=33 )
 
-    local -i code
-    case "$mode" in
-        ATTR_RESET)
-            code="${ATTR_RESET[$name]:-}";;
-        ATTR_SETTERS)
-            code="${ATTR_SETTERS[$name]:-}";;
-        BACKGROUND)
-            code="${BACKGROUND[$name]:-}";;
-        FOREGROUND)
-            code="${FORGROUND[$name]:-}";;
-    esac
+    local -i code="$("term.codes_$mode" "$name")"
     [ "${code:--1}" -lt 0 ] || printf '\x1b[%dm' "$code"
 }
 
