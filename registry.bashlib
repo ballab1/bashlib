@@ -27,7 +27,7 @@ function registry.createTime()
     local -r manifests="$(registry.manifest "$name" "${tags[0]}")"
     if [ "$manifests" ] && [[ ! $manifests =~ MANIFEST_INVALID ]]; then
 #        local fslayers=$(jq -r 'try [ .fsLayers|length ]' <<< "$manifests")
-        local createTime=$(jq -r 'try [ .history[].v1Compatibility|fromjson.created | sub("\\.\\d+Z"; "Z") | fromdate] | max | todate' <<< "$manifests")
+        local createTime=$(jq -r 'try [ .history[].v1Compatibility.created | sub("\\.\\d+Z"; "Z") | fromdate] | max | todate' <<< "$manifests")
         if [ "$createTime" ]; then
             echo "$createTime"
             return 0
@@ -269,7 +269,7 @@ function registry.manifest()
     local -r name=${1:?}
     local -r reference=${2:?}
 
-    registry.GET --silent "$(registry.URL)/${name}/manifests/${reference}" || echo "Failed to get $(registry.URL)/${name}/manifests/${reference}" >&2
+    registry.GET --silent "$(registry.URL)/${name}/manifests/${reference}" |  jq -c -M '.history[].v1Compatibility|=fromjson' || echo "Failed to get $(registry.URL)/${name}/manifests/${reference}" >&2
 }
 export -f registry.manifest
 
