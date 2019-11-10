@@ -6,6 +6,18 @@
 #
 
 #----------------------------------------------------------------------------------------------
+function docker.baseImage()
+{
+    local -r ref="${1:?}"
+
+    local base="${ref%:*}"
+    local registry="$(registry.SERVER)"
+    [[ "$base" =~ "$registry"* ]] || base="${registry}$base"
+    echo "$base"
+}
+export -f docker.baseImage
+
+#----------------------------------------------------------------------------------------------
 function docker.clean()
 {
     local -a collection
@@ -34,7 +46,7 @@ function docker.clean()
     for image in $(docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -v '<none>' ||:); do
         fingerprint=$(docker inspect "$image" | jq -r '.[].Config.Labels."container.fingerprint"?') ||:
         [ -z "${fingerprint:-}" ] && continue
-        [ "$fingerprint" != "${image##*:}" ] && continue
+        [ "$fingerprint" != "$(docker.tag "$image")" ] && continue
         collection+=( $image )
     done
 
@@ -163,6 +175,18 @@ function docker.pushRetained()
 export -f docker.pushRetained
 
 #----------------------------------------------------------------------------------------------
+function docker.repo()
+{
+    local -r ref="${1:?}"
+
+    local repo="${ref%:*}"
+    local registry="$(registry.SERVER)"
+    [[ "$repo" =~ "$registry"* ]] && repo="${repo#${registry}}"
+    echo "$repo"
+}
+export -f docker.repo
+
+#----------------------------------------------------------------------------------------------
 function docker.services()
 {
     local -r dc_yaml="${1:?'no docker-compose.yml specified'}"
@@ -187,5 +211,13 @@ function docker.showProcessReport()
     printf '%s\n' "${containers[@]}" | sort
 }
 export -f docker.showProcessReport
+
+#----------------------------------------------------------------------------------------------
+function docker.tag()
+{
+    local -r ref="${1:?}"
+    echo "${ref##*:}"
+}
+export -f docker.tag
 
 #----------------------------------------------------------------------------------------------

@@ -8,12 +8,16 @@
 #----------------------------------------------------------------------------------------------
 function json.encodeArray()
 {
-    local -n assoc="${1:?}"
     local type=$(typeset -p "$1" | awk '{print $2}')
     if [ "$type" = '--' ]; then
+        local ref="${1:?}"
         echo -n "$assoc"
+        return
+    fi
 
-    elif [ "${#assoc[*]}" -gt 0 ]; then
+    # derefernce the ARRAY reference passed in
+    local -a 'assoc=("${'"$1"'[@]}")'
+    if [ "${#assoc[*]}" -gt 0 ]; then
         echo -n '['
         local val comma
         for val in "${assoc[@]}"; do
@@ -62,26 +66,42 @@ function json.encodeField()
 }
 export -f json.encodeField
 
+fn()
+{
+    local -a 'arraykeys=("${!'"$1"'[@]}")'
+    echo ${arraykeys[*]}
+    echo ${#arraykeys[*]}
+}
+
 #----------------------------------------------------------------------------------------------
 function json.encodeHash()
 {
-    local -n assoc="${1:?}"
     local type=$(typeset -p "$1" | awk '{print $2}')
     if [ "$type" = '--' ]; then
-        echo -n "$assoc"
-
-    else
-        echo -n '{'
-        if [ "${#assoc[*]}" -gt 0 ]; then
-            local val comma
-            for val in "${!assoc[@]}"; do
-                [ -z "${comma:-}" ] || printf ','
-                json.encodeField "$val" "${assoc[$val]}"
-                comma=','
-            done
-        fi
-        echo -n '}'
+        local ref="${1:?}"
+        echo -n "$!ref"
+        return 0
     fi
+
+    # derefernce the ASSOIATIVE ARRAY reference passed in
+    local -a 'names=("${!'"$1"'[@]}")'
+    local -a 'vals=("${'"$1"'[@]}")'
+    local -A assoc=()
+    for (( i=0; i<"${#names[*]}"; i++ )); do
+        assoc[${names[$i]}]="${vals[$i]}"
+    done
+
+    # now encode the hash
+    echo -n '{'
+    if [ "${#assoc[*]}" -gt 0 ]; then
+        local val comma
+        for val in "${!assoc[@]}"; do
+            [ -z "${comma:-}" ] || printf ','
+            json.encodeField "$val" "${assoc[$val]}"
+            comma=','
+        done
+    fi
+    echo -n '}'
 }
 
 #----------------------------------------------------------------------------------------------

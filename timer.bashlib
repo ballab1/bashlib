@@ -64,3 +64,11 @@ function timer.secondsSinceMidnight()
 export -f timer.secondsSinceMidnight
 
 #----------------------------------------------------------------------------
+# get the time from UTC in universal format
+function timer.zuluTime()
+{
+    date +%Y-%m-%d\T%H:%M:%S.%N\Z -u
+}
+export -f timer.zuluTime
+
+#----------------------------------------------------------------------------

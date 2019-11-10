@@ -131,6 +131,7 @@ function registry.digestsWithTimes()
         [ "${times[$createTime]:-}" ] || times[$createTime]="$digest"
     done
 
+    echo -n '['
     local -i x=0
     for createTime in $(printf '%s\n' "${!times[@]}" | sort); do
         (( x++ )) && echo -n ','
@@ -153,8 +154,8 @@ function registry.digestsWithTimes()
         done
         echo -n '"'"${tag}"'"]}'
     done
+    echo -n ']'
 }
-export -f registry.digestsWithTimes
 
 #----------------------------------------------------------------------------------------------
 function registry.digestsWithoutTimes()
@@ -177,6 +178,7 @@ function registry.digestsWithoutTimes()
         digests["$digest"]="$(echo -en "${tag}\n${digests[$digest]:-}")"
     done
 
+    echo -n '['
     local -i x=0
     for digest in ${!digests[@]}; do
         (( x++ )) && echo -n ','
@@ -196,8 +198,8 @@ function registry.digestsWithoutTimes()
         done
         echo -n '"'"${tag}"'"]}'
     done
+    echo -n ']'
 }
-export -f registry.digestsWithoutTimes
 
 #----------------------------------------------------------------------------------------------
 function registry.GET()
