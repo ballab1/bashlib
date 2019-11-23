@@ -71,15 +71,15 @@ function github.io()
 
 
     # an error occurred
-    local -r errors="$(echo "$response" | jq '.errors[]?' 2>/dev/null)"
+    local -r errors="$(echo "$response" | jq --compact-output --monochrome-output '.errors[]?' 2>/dev/null)"
 
     local curl_cmd=( 'curl' '--insecure' "$@" )
     echo
 (   term.log "***ERROR: failure to complete GitHub request
     command:       $(printf '%s ' "${curl_cmd[@]}")
-    error code:    $(jq '.code?' <<< "$errors")
-    error message: $(jq '.message?' <<< "$errors")
-    error details: $(jq '.detail?' <<< "$errors")
+    error code:    $(jq --compact-output --monochrome-output '.code?' <<< "$errors")
+    error message: $(jq --compact-output --monochrome-output '.message?' <<< "$errors")
+    error details: $(jq --compact-output --monochrome-output '.detail?' <<< "$errors")
     http_code:     ${http_code:-}
     " 'warn' >&2
     )

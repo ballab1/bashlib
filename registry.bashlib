@@ -12,7 +12,7 @@ export http_code
 #----------------------------------------------------------------------------------------------
 function registry.catalog()
 {
-    registry.GET --silent "$(registry.URL)/_catalog" | jq -r '.repositories| sort[]? ' || echo "Failed to get $(registry.URL)/_catalog" >&2
+    registry.GET --silent "$(registry.URL)/_catalog" | jq --compact-output --monochrome-output --raw-output '.repositories| sort[]? ' || echo "Failed to get $(registry.URL)/_catalog" >&2
 }
 export -f registry.catalog
 
@@ -26,8 +26,8 @@ function registry.createTime()
 
     local -r manifests="$(registry.manifest "$name" "${tags[0]}")"
     if [ "$manifests" ] && [[ ! $manifests =~ MANIFEST_INVALID ]]; then
-#        local fslayers=$(jq -r 'try [ .fsLayers|length ]' <<< "$manifests")
-        local createTime=$(jq -r 'try [ .history[].v1Compatibility.created | sub("\\.\\d+Z"; "Z") | fromdate] | max | todate' <<< "$manifests")
+#        local fslayers=$(jq --compact-output --monochrome-output --raw-output 'try [ .fsLayers|length ]' <<< "$manifests")
+        local createTime=$(jq --compact-output --monochrome-output --raw-output 'try [ .history[].v1Compatibility.created | sub("\\.\\d+Z"; "Z") | fromdate] | max | todate' <<< "$manifests")
         if [ "$createTime" ]; then
             echo "$createTime"
             return 0
@@ -235,15 +235,15 @@ function registry.io()
     [ "$status" -ne 0 ] || return 0
 
     # an error occurred
-    local -r errors="$(echo "$response" | jq '.errors[]?' 2>/dev/null)"
+    local -r errors="$(echo "$response" | jq --compact-output --monochrome-output '.errors[]?' 2>/dev/null)"
 
     local curl_cmd=( 'curl' '--insecure' "$@" )
     echo
 (   term.log "***ERROR: failure to complete registry request
     command:       $(printf '%s ' "${curl_cmd[@]}")
-    error code:    $(jq '.code?' <<< "$errors")
-    error message: $(jq '.message?' <<< "$errors")
-    error details: $(jq '.detail?' <<< "$errors")
+    error code:    $(jq --compact-output --monochrome-output '.code?' <<< "$errors")
+    error message: $(jq --compact-output --monochrome-output '.message?' <<< "$errors")
+    error details: $(jq --compact-output --monochrome-output '.detail?' <<< "$errors")
     http_code:     ${http_code:-}
     " 'warn' >&2
     )
@@ -271,7 +271,7 @@ function registry.manifest()
     local -r name=${1:?}
     local -r reference=${2:?}
 
-    registry.GET --silent "$(registry.URL)/${name}/manifests/${reference}" |  jq -c -M '.history[].v1Compatibility|=fromjson' || echo "Failed to get $(registry.URL)/${name}/manifests/${reference}" >&2
+    registry.GET --silent "$(registry.URL)/${name}/manifests/${reference}" |  jq --compact-output --monochrome-output '.history[].v1Compatibility|=fromjson' || echo "Failed to get $(registry.URL)/${name}/manifests/${reference}" >&2
 }
 export -f registry.manifest
 
@@ -324,7 +324,7 @@ function registry.tags()
     local -r name=${1:?}
 
     local -r json=$(registry.GET --silent "$(registry.URL)/${name}/tags/list" || echo "Failed to get $(registry.URL)/${name}/tags/list" >&2)
-    [ -z "${json:-}" ] || jq -r '.tags[]?' <<< "$json"
+    [ -z "${json:-}" ] || jq --compact-output --monochrome-output --raw-output '.tags[]?' <<< "$json"
 }
 export -f registry.tags
 
