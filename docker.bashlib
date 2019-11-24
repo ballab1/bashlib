@@ -162,29 +162,23 @@ function docker.imageExists()
     # no image found locally. Need to locate best match from registry
 
 
-    # get list of images from registry
-    local json="$(registry.digests "$repo" 'notimes')" && status=$? || status=$?
-    [ $status -ne 0 ] && trap.die "unable to access existing registry content for $base"
-
     # search for match across all tags in registry
     for tag in "$imageTag" "${candidateTags[@]}"; do
-        if [ "$(jq --compact-output --monochrome-output '.[]|select(.tags|contains(["'$tag'"]))' <<< "$json")" ]; then
-            echo "pulling image: ${imageRepo}:$tag" >&2
-            docker pull "${imageRepo}:$tag"  > /dev/null
+        echo "checking registry for ${imageRepo}:$tag" >&2
+        docker pull "${imageRepo}:$tag"  &> /dev/null || continue
 
-            if [ "$tag" = "$imageTag" ] && [ "${#candidateTags[*]}" -eq 1 ]; then
-                if [ "$fingerprint" = "$(docker inspect "${imageRepo}:$tag" | jq --compact-output --monochrome-output --raw-output '.[].Config.Labels."container.fingerprint"' )" ]; then
-                    return 0
-                fi
-                docker rmi "${imageRepo}:$tag" > /dev/null
-                continue
+        if [ "$tag" = "$imageTag" ] && [ "${#candidateTags[*]}" -eq 1 ]; then
+            [ "$fingerprint" = "$(docker inspect "${imageRepo}:$tag" | jq --compact-output --monochrome-output --raw-output '.[].Config.Labels."container.fingerprint"' )" ] && return 0
 
-            elif [ "$image" != "${imageRepo}:$tag" ]; then
-                docker tag "${imageRepo}:$tag" "$image"
-                docker rmi "${imageRepo}:$tag" > /dev/null
-            fi
-            return 0
+            # wrong image, try again
+            docker rmi "${imageRepo}:$tag" &> /dev/null
+            continue
+
+        elif [ "$image" != "${imageRepo}:$tag" ]; then
+            docker tag "${imageRepo}:$tag" "$image"
+            docker rmi "${imageRepo}:$tag" &> /dev/null
         fi
+        return 0
     done
 
     # nothing found. return an error
