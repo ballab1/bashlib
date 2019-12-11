@@ -56,10 +56,15 @@ function jira.io()
     local headers response url
     local -i status=0
     local -A links
-    local -ra credentials=( $(credentials.get jira) )
+    local -a credentials=( $(credentials.get jira) )
+    if [ "${DEBUG:-0}" -eq 0 ]; then
+        credentials+=( '--silent' )
+    else
+        echo "curl $*" >&2
+    fi
 
     headers=$(mktemp)
-    args=( "${credentials[@]}" '--silent' '--header' 'Content-Type: application/json' '--dump-header' "$headers" "$@" )
+    args=( "${credentials[@]}" '--header' 'Content-Type: application/json' '--dump-header' "$headers" "$@" )
     response=$(curl "${args[@]}") && status=$? || status=$?
 
     if [ "$status" -eq 0 ]; then
@@ -69,6 +74,7 @@ function jira.io()
             [ "${DEBUG:-0}" -ne 0 ] && cat  "$headers" >&2
             status=-1
         else
+            [ "${DEBUG:-0}" -ne 0 ] && (echo '----------'; echo "$response" ; echo '----------'; echo )  >&2
             echo -n "$response"
         fi
     fi

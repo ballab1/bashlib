@@ -8,20 +8,26 @@
 #----------------------------------------------------------------------------------------------
 function docker.baseImage()
 {
-    local -r ref="${1:?}"
+    local ref="${1:?}"
 
-    local base="${ref%:*}"
-    local registry="$(registry.SERVER)"
-    [[ "$base" =~ "$registry"* ]] || base="${registry}$base"
-    echo "$base"
+    if [[ "$ref" = *@sha256:* ]]; then
+        echo "${ref%@*}"
+
+    else
+        local registry="$(registry.SERVER)"
+        ref="${ref#${registry}}"
+        echo "${registry}${ref%:*}"
+    fi
 }
 export -f docker.baseImage
 
 #----------------------------------------------------------------------------------------------
 function docker.clean()
 {
+    local dockerRootDir="$(docker system info | grep 'Docker Root Dir:' | sed -E 's|^.+:\s+||')"
+
     local -a collection
-    local -i blocksUsedBefore="$(df /var/lib/docker/volumes | awk '{if (NR==2) {print $3}}')"
+    local -i blocksUsedBefore="$(df "${dockerRootDir}/volumes" | awk '{if (NR==2) {print $3}}')"
 
     # remove all containers which are stopped along with their associated volumes
     collection=()
@@ -61,7 +67,7 @@ function docker.clean()
         mapfile -t collection < <(printf '%s\n' ${collection[@]} | sort -u)   # remove duplicates
 
         # Allow any images associated with running containers
-        local -r processes="$(for i in $(docker ps --all --format '{{.Image}}'); do docker inspect $i 2>/dev/null | jq --compact-output --monochrome-output --raw-output '[.[].Id[7:19]]|unique[]' ||: ;done)"
+        local -r processes="$(for i in $(docker ps --all --format '{{.Image}}'); do docker inspect $i 2>/dev/null | jq --compact-output --monochrome-output --raw-output '.[].RepoTags|unique[]' ||: ;done)"
         local -i idx=${#collection[*]}
         while [ $(( idx-- )) -gt 0 ]; do
             image=${collection[$idx]}
@@ -88,7 +94,7 @@ function docker.clean()
     if [ "${#collection[*]}" -gt 0 ]; then
         local -i deletions=0
         local volumes="$( printf "%s\n" "${collection[@]}" )"
-        for dir in $(sudo find '/var/lib/docker/volumes/' -mindepth 1 -maxdepth 1 -type d); do
+        for dir in $(sudo find "${dockerRootDir}/volumes" -mindepth 1 -maxdepth 1 -type d); do
             (grep "$dir" <<< "$volumes") && continue
             sudo rm -rf "$dir"
             (( deletions++ )) ||:
@@ -99,7 +105,7 @@ function docker.clean()
 
     # show results
     (
-        local -i blocksUsedAfter="$(df /var/lib/docker/volumes | awk '{if (NR==2) {print $3}}')"
+        local -i blocksUsedAfter="$(df "${dockerRootDir}/volumes" | awk '{if (NR==2) {print $3}}')"
         local -i recovered=$(( blocksUsedBefore - blocksUsedAfter ))
         [ $recovered -le 0 ] || printf "Recovered %d kb\n" $recovered
         echo
@@ -123,11 +129,10 @@ function docker.imageExists()
 
     if [ "${#candidateTags[*]}" -eq 1 ]; then
         local fingerprint="${candidateTags[0]}"
-        term.log "checking for local $image with the correct fingerprint"'\n'
         local -a images
         if [ "$(docker images --format '{{.Repository}}:{{.Tag}}' --filter "reference=$image")" ] &&
            [ "$fingerprint" = "$(docker inspect "$image" | jq --compact-output --monochrome-output --raw-output '.[].Config.Labels."container.fingerprint"' )" ]; then
-            term.elog "${image} has not changed"'\n'
+            echo "${image} has not changed"
             return 0
         fi
 
@@ -140,19 +145,22 @@ function docker.imageExists()
                               | grep -v '<none>:<none>' || :)
         if [ ${#images[*]} -gt 0 ]; then
             if [ $(printf '%s\n' "${images[@]}" | grep -cs "$image") -gt 0 ]; then
-                term.elog "${image} has not changed"'\n'
-            else
-                # found image by a different 'name:tag'
-                docker tag "${images[0]}" "$image"
+                echo "${image} has not changed"
+                return 0
             fi
+
+            # found image by a different 'name:tag'
+            echo "found ${image} with a different name. Retagging."
+            docker tag "${images[0]}" "$image"
             return 0
         fi
     else
 
         # search local for match
-        for tag in "${candidateTags[@]}"; do
+        for tag in "$imageTag" "${candidateTags[@]}"; do
             if [ "$(docker images --format '{{.Repository}}:{{.Tag}}' --filter "reference=${imageRepo}:$tag")" ]; then
                 [ "$image" = "${imageRepo}:$tag" ] || docker tag "${imageRepo}:$tag" "$image"
+                echo "found ${image} locally"
                 return 0
             fi
         done
@@ -164,25 +172,27 @@ function docker.imageExists()
 
     # search for match across all tags in registry
     for tag in "$imageTag" "${candidateTags[@]}"; do
-        echo "checking registry for ${imageRepo}:$tag" >&2
         docker pull "${imageRepo}:$tag"  &> /dev/null || continue
 
         if [ "$tag" = "$imageTag" ] && [ "${#candidateTags[*]}" -eq 1 ]; then
-            [ "$fingerprint" = "$(docker inspect "${imageRepo}:$tag" | jq --compact-output --monochrome-output --raw-output '.[].Config.Labels."container.fingerprint"' )" ] && return 0
 
-            # wrong image, try again
-            docker rmi "${imageRepo}:$tag" &> /dev/null
-            continue
+            # when "${#candidateTags[*]}"n equals 1, we are looking for a specific fingerprint
+            if [ "$fingerprint" != "$(docker inspect "${imageRepo}:$tag" | jq --compact-output --monochrome-output --raw-output '.[].Config.Labels."container.fingerprint"' )" ]; then
+                # wrong image, try again
+                docker rmi "${imageRepo}:$tag" &> /dev/null
+                continue
+            fi
 
         elif [ "$image" != "${imageRepo}:$tag" ]; then
             docker tag "${imageRepo}:$tag" "$image"
             docker rmi "${imageRepo}:$tag" &> /dev/null
         fi
+        echo "pulled ${image} from registry"
         return 0
     done
 
-    # nothing found. return an error
-    return 1
+    # nothing found. do not echo anything
+    return 0
 }
 export -f docker.imageExists
 
@@ -228,27 +238,32 @@ function docker.pushRetained()
             docker tag "$image" "$(docker.baseImage "$image"):$fp"  > /dev/null 2>&1 ||: # ignore errors
         fi
     done
+
     [ "${#allImages[*]}" -gt 0 ] || trap.die 'no valid images found'
-    mapfile -t allImages < <(printf '%s\n' "${allImages[@]}" | uniq)
+    # strip out duplicate entries (so we don't push stuff twice)
+    local -a imagesToPush
+    mapfile -t imagesToPush < <(printf '%s\n' "${allImages[@]}" | sort -u)
 
     local attempt
     local -i wasPushed
-    for image in "${allImages[@]}"; do
+    for image in "${imagesToPush[@]}"; do
         wasPushed=0
         for attempt in {0..2}; do
             term.log "    Pushing ${image}"'\n' 'lt_blue'
-            docker push "$image" && wasPushed=1 && break
+            docker push "$image" >/dev/null && wasPushed=1 && break
             echo 'retrying...'
         done
         [ "$wasPushed" -eq 0 ] && trap.die "Failed to push $image"
     done
 
-    for image in "${allImages[@]}"; do
+    for image in "${imagesToPush[@]}"; do
         local -i wasTagged=0
         for inp in "${images[@]}"; do
             [ "$inp" = "$image" ] && wasTagged=1 && break
         done
-        [ "$wasTagged" -eq 1 ] || docker rmi "$image"
+        [ "$wasTagged" -eq 1 ] && continue
+        term.log "    Removing temporary image: ${image}"'\n' 'lt_blue'
+        docker rmi "$image" >/dev/null
     done
 }
 export -f docker.pushRetained
@@ -256,12 +271,17 @@ export -f docker.pushRetained
 #----------------------------------------------------------------------------------------------
 function docker.repo()
 {
-    local -r ref="${1:?}"
+    local ref="${1:?}"
 
-    local repo="${ref%:*}"
     local registry="$(registry.SERVER)"
-    [[ "$repo" =~ "$registry"* ]] && repo="${repo#${registry}}"
-    echo "$repo"
+    ref="${ref#${registry}}"
+
+    if [[ "$ref" = *@sha256:* ]]; then
+        echo "${ref%@*}"
+
+    else
+        echo "${ref%:*}"
+    fi
 }
 export -f docker.repo
 
@@ -294,8 +314,16 @@ export -f docker.showProcessReport
 #----------------------------------------------------------------------------------------------
 function docker.tag()
 {
-    local -r ref="${1:?}"
-    echo "${ref##*:}"
+    local ref="${1:?}"
+
+    if [[ "$ref" = *@sha256:* ]]; then
+       echo "${ref#*@}"
+
+    else
+        local registry="$(registry.SERVER)"
+        ref="${ref#${registry}}"
+        echo "${ref##*:}"
+    fi
 }
 export -f docker.tag
 

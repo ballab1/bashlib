@@ -14,6 +14,7 @@ function versions.data()
 
     local -r deploy_json="$(lib.yamlToJson "$deploy_yaml")"
 
+    # parse version info from provided yaml file into 'VERSIONS' associative array
     local key val
     local -A VERSIONS=()
     while read -r key; do
@@ -21,10 +22,10 @@ function versions.data()
         VERSIONS[$key]="$(eval echo "$val")"
     done < <(jq --compact-output --monochrome-output --raw-output '.versions|keys[]' <<< "$deploy_json")
 
-    # temporarily reduce DEBUG_TRACE to prevent 'git' tracing
+    # ensure that our versions repo matches what is specified in provided yaml file (or overridden with provided 'commit')
     (
-        if [ "${commit:-}" ]; then
-            (( DEBUG_TRACE-- )) ||:
+        if [ "${VERSIONS['commit']:-}" ] || [ ! -d "${VERSIONS['dir']}" ]; then
+            (( DEBUG_TRACE-- )) ||:                 # temporarily reduce DEBUG_TRACE to prevent 'git' tracing
             if versions.initialize "$commit"; then
                 commit=$(versions.lastCommit)
                 if [ "$commit" != "${VERSIONS['commit']}" ]; then
@@ -67,29 +68,27 @@ function versions.initialize()
     VERSIONS['dir']="$(pwd)"
 
     # return if versions directory is dirty
-    versions.isNotDirty || return 1
+    versions.isDirty && return 1
 
     # ensure version info is up-to-date
-    if [ "${commit^^:-}" = 'HEAD' ]; then
-        if ! git.checkout "${VERSIONS['commit']}" --quiet ; then
-            cd ..
-            rm -rf "$versions_dir"
-            git.clone "${VERSIONS['repo']}" "$versions_dir" --no-checkout
-            cd "$versions_dir"
-            git.checkout "${VERSIONS['commit']}" --quiet
-        fi
+    if [ "${commit^^:-}" = 'HEAD' ] || [ -z "${VERSIONS['commit']:-}" ]; then
+        git.reset "origin/${VERSIONS['branch']:-master}" --hard
         return 1
     fi
+
+    git.checkout "${VERSIONS['commit']}" --quiet
+
+    # return 0 to indicate no change in commit
     return 0
 }
 export -f versions.initialize
 
 #----------------------------------------------------------------------------------------------
-function versions.isNotDirty()
+function versions.isDirty()
 {
-    [[ "$(git describe --tags --always --dirty)" != *-dirty ]]
+    [[ "$(git describe --tags --always --dirty)" = *-dirty ]]
 }
-export -f versions.isNotDirty
+export -f versions.isDirty
 
 #----------------------------------------------------------------------------------------------
 function versions.lastCommit()

@@ -54,6 +54,20 @@ function lib.file_env()
 }
 export -f lib.file_env
 
+
+#----------------------------------------------------------------------------------------------
+function lib.functions()
+{
+    local op="${1:-'unset'}"
+
+    [ "$op" = 'unset' ] || op='export'
+    local f
+    for f in $(grep -R '^function ' "${PROGRAM_DIR}/bashlib"/*.bashlib | sed -re 's|^.*function (.+)\s*\(.+$|\1|'); do
+       $op -f "$f"
+    done
+}
+export -f lib.functions
+
 #----------------------------------------------------------------------------------------------
 function lib.fileSha256()
 {

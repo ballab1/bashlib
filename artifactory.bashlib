@@ -33,7 +33,7 @@ function artifactory.deleteArtifact()
     echo -n "Deleting artifact: $artifact  "
     local url="https://$(artifactory.SERVER)/artifactory/$artifact"
     [[ "$artifact" = 'http'* ]] && url="$artifact"
-    artifactory.DELETE --silent --show-error --write-out '%{http_code}\n' "$url" || echo "Failed to delete $artifact"
+    artifactory.DELETE --show-error --write-out '%{http_code}\n' "$url" || echo "Failed to delete $artifact"
     echo
 }
 export -f artifactory.deleteArtifact
@@ -100,10 +100,15 @@ function artifactory.io()
     local headers response url
     local -i status=0
     local -A links
-    local -ra credentials=( $(credentials.get artifactory) )
+    local -a credentials=( $(credentials.get artifactory) )
+    if [ "${DEBUG:-0}" -eq 0 ]; then
+        credentials+=( '--silent' )
+    else
+        echo "curl $*" >&2
+    fi
 
     headers=$(mktemp)
-    args=( "${credentials[@]}" '--silent' '--dump-header' "$headers" "$@" )
+    args=( "${credentials[@]}" '--dump-header' "$headers" "$@" )
     response=$(curl "${args[@]}") && status=$? || status=$?
 
     if [ "$status" -eq 0 ]; then
@@ -112,6 +117,7 @@ function artifactory.io()
         if [ "${http_code:0:1}" -gt 3 ]; then
             status=-1
         else
+            [ "${DEBUG:-0}" -ne 0 ] && (echo '----------'; echo "$response" ; echo '----------'; echo )  >&2
             echo -n "$response"
         fi
     fi
