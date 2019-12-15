@@ -24,7 +24,7 @@ export -f docker.baseImage
 #----------------------------------------------------------------------------------------------
 function docker.clean()
 {
-    local dockerRootDir="$(docker system info | grep 'Docker Root Dir:' | sed -E 's|^.+:\s+||')"
+    local dockerRootDir="$(docker system info 2>/dev/null | grep 'Docker Root Dir:' | sed -E 's|^.+:\s+||')"
 
     local -a collection
     local -i blocksUsedBefore="$(df "${dockerRootDir}/volumes" | awk '{if (NR==2) {print $3}}')"

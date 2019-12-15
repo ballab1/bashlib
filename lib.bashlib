@@ -9,6 +9,22 @@
 #
 
 #----------------------------------------------------------------------------------------------
+# Check boolean value
+function lib.checkBoolean()
+{
+    case "${1,,}" in
+        true|1|yes)
+            echo 1
+            return 0;;
+        false|0|no)
+            echo 0
+            return 1;;
+    esac
+    return -1
+}
+export -f lib.checkBoolean
+
+#----------------------------------------------------------------------------------------------
 function lib.exportFileVars()
 {
     local -r settings="${1:?"Input parameter 'settings' must be passed to 'function ${FUNCNAME[0]}()'"}"
