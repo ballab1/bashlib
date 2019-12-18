@@ -2,32 +2,32 @@
 
 #----------------------------------------------------------------------------------------------
 #
-#  general 'jenkins' scripts
+#  general 'photoprism' scripts
 #
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
-function jenkins.DELETE()
+function photoprism.DELETE()
 {
-    jenkins.io --request DELETE "$@" || return 1
+    photoprism.io --request DELETE "$@" || return 1
 }
-export -f jenkins.DELETE
+export -f photoprism.DELETE
 
 #----------------------------------------------------------------------------------------------
-function jenkins.GET()
+function photoprism.GET()
 {
-    jenkins.io --request GET "$@" || return 1
+    photoprism.io --request GET "$@" || return 1
 }
-export -f jenkins.GET
+export -f photoprism.GET
 
 #----------------------------------------------------------------------------------------------
-function jenkins.io()
+function photoprism.io()
 {
     local -a args
     local headers response url
     local -i status=0
     local -A links
-    local -a credentials=( $(credentials.get jenkins) )
+    local -a credentials=( $(credentials.get photoprisom) )
     if [ "${DEBUG:-0}" -eq 0 ]; then
         credentials+=( '--silent' )
     else
@@ -71,82 +71,61 @@ function jenkins.io()
 
     return 1
 }
-export -f jenkins.io
+export -f photoprism.io
 
 #----------------------------------------------------------------------------------------------
-function jenkins.POST()
+function photoprism.POST()
 {
-    jenkins.io --request POST "$@" || return 1
+    photoprism.io --request POST "$@" || return 1
 }
-export -f jenkins.POST
+export -f photoprism.POST
 
 #----------------------------------------------------------------------------------------------
-function jenkins.propFile()
+function photoprism.propFile()
 {
     echo "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/properties/$(basename "${BASH_SOURCE[0]%.*}").properties"
 }
 
-export JENKINS_PROPERTIES_FILE="${JENKINS_PROPERTIES_FILE:=$(jenkins.propFile)}"
+export PHOTOPRISM_PROPERTIES_FILE="${PHOTOPRISM_PROPERTIES_FILE:=$(photoprism.propFile)}"
 
 #----------------------------------------------------------------------------------------------
-function jenkins.propertiesFile()
+function photoprism.propertiesFile()
 {
-    echo "${JENKINS_PROPERTIES_FILE:=$(jenkins.propFile)}"
+    echo "${PHOTOPRISM_PROPERTIES_FILE:=$(photoprism.propFile)}"
 }
-export -f jenkins.propertiesFile
+export -f photoprism.propertiesFile
 
 #----------------------------------------------------------------------------------------------
-function jenkins.PROD()
+function photoprism.PROD()
 {
-    echo "${_JENKINS_PROD:=$(lib.getProperty "${FUNCNAME[0]##*.}" "$( jenkins.propertiesFile )")}"
+    echo "${_PHOTOPRISM_PROD:=$(lib.getProperty "${FUNCNAME[0]##*.}" "$( photoprism.propertiesFile )")}"
 }
-export -f jenkins.PROD
+export -f photoprism.PROD
 
 #----------------------------------------------------------------------------------------------
-function jenkins.PUT()
+function photoprism.PUT()
 {
-    jenkins.io --request PUST "$@" || return 1
+    photoprism.io --request PUST "$@" || return 1
 }
-export -f jenkins.PUT
+export -f photoprism.PUT
 
 #----------------------------------------------------------------------------------------------
-function jenkins.REST_API()
+function photoprism.REST_API()
 {
-    echo "${_JENKINS_RESTAPI:=$(lib.getProperty "${FUNCNAME[0]##*.}" "$( jenkins.propertiesFile )")}"
+    echo "${_PHOTOPRISM_RESTAPI:=$(lib.getProperty "${FUNCNAME[0]##*.}" "$( photoprism.propertiesFile )")}"
 }
-export -f jenkins.REST_API
+export -f photoprism.REST_API
 
 #----------------------------------------------------------------------------------------------
-function jenkins.SERVER()
+function photoprism.SERVER()
 {
-    echo "${_JENKINS_SERVER:=$(lib.getProperty "${FUNCNAME[0]##*.}" "$( jenkins.propertiesFile )")}"
+    echo "${_PHOTOPRISM_SERVER:=$(lib.getProperty "${FUNCNAME[0]##*.}" "$( photoprism.propertiesFile )")}"
 }
-export -f jenkins.SERVER
+export -f photoprism.SERVER
 
 #----------------------------------------------------------------------------------------------
-function jenkins.TEST()
+function photoprism.USER()
 {
-    echo "${_JENKINS_TEST:=$(lib.getProperty "${FUNCNAME[0]##*.}" "$( jenkins.propertiesFile )")}"
+    echo "${_PHOTOPRISM_USER:=$(lib.getProperty "${FUNCNAME[0]##*.}" "$( photoprism.propertiesFile )")}"
 }
-export -f jenkins.TEST
-
-#----------------------------------------------------------------------------------------------
-function jenkins.URL()
-{
-    echo "${_JENKINS_URL:=$(lib.getProperty "${FUNCNAME[0]##*.}" "$( jenkins.propertiesFile )")}"
-}
-export -f jenkins.URL
-
-#----------------------------------------------------------------------------------------------
-function jenkins.USER()
-{
-    echo "${_JENKINS_USER:=$(lib.getProperty "${FUNCNAME[0]##*.}" "$( jenkins.propertiesFile )")}"
-}
-export -f jenkins.USER
-
-#----------------------------------------------------------------------------------------------
-function jenkins.USERID()
-{
-    echo "${_JENKINS_USERID:=$(lib.getProperty "${FUNCNAME[0]##*.}" "$( jenkins.propertiesFile )")}"
-}
-export -f jenkins.USERID
+export -f photoprism.USER

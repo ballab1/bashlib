@@ -212,6 +212,14 @@ function git.lsTree()
 export -f git.lsTree
 
 #----------------------------------------------------------------------------------------------
+function git.mainBranch()
+{
+    local master="$(git config --get core.branch)"
+    [ -z "$master" ] && master='master'
+    echo $master
+}
+
+#----------------------------------------------------------------------------------------------
 function git.origin()
 {
     local -r dir=${1:-.}
