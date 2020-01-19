@@ -39,7 +39,7 @@ function lib.exportFileVars()
         key="$(cut -d '=' -f 1 <<< "$line")"
         [ "$override" = 'false' ] && [ "${!key:-}" ] && continue
         eval "$fn $line"
-    done < <(grep '=' "$settings" | grep -Ev "^\s*#")
+    done < <(grep '=' "$settings" | grep -Ev "^\s*#" ||:)
 }
 export -f lib.exportFileVars
 
@@ -74,11 +74,12 @@ export -f lib.file_env
 #----------------------------------------------------------------------------------------------
 function lib.functions()
 {
-    local op="${1:-'unset'}"
+    local -r libdir="${1:?}"
+    local op="${2:-'unset'}"
 
     [ "$op" = 'unset' ] || op='export'
     local f
-    for f in $(grep -R '^function ' "${PROGRAM_DIR}/bashlib"/*.bashlib | sed -re 's|^.*function (.+)\s*\(.+$|\1|'); do
+    for f in $(grep -E '^function ' "${libdir}"/*.bashlib | sed -re 's|^.*function (.+)\s*\(.+$|\1|'); do
        $op -f "$f"
     done
 }
