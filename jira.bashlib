@@ -19,6 +19,13 @@ export -f jira.propFile
 export JIRA_PROPERTIES_FILE="${JIRA_PROPERTIES_FILE:=$(jira.propFile)}"
 
 #----------------------------------------------------------------------------------------------
+function jira.allfields()
+{
+    jira.GET "$(jira.REST_API)/field"
+}
+export -f jira.allfields
+
+#----------------------------------------------------------------------------------------------
 function jira.DELETE()
 {
     jira.io --request DELETE --show-error --write-out '\n%{http_code}\n' "$@"  || return $?
@@ -34,13 +41,6 @@ function jira.comments()
     jira.GET "$uri"
 }
 export -f jira.comments
-
-#----------------------------------------------------------------------------------------------
-function jira.fields()
-{
-    jira.GET "$(jira.REST_API)/field"
-}
-export -f jira.fields
 
 #----------------------------------------------------------------------------------------------
 function jira.GET()
@@ -142,7 +142,7 @@ function jira.projectInfo()
     local uri=$(printf "%s/$JIRA_PROJECT_INFO_API" "$(jira.REST_API)" "$project" "$issueType")
     local response=$(jira.GET $uri)
 
-    jq --compact-output --monochrome-output '.projects[]|select(.key=="'${project}'").issuetypes[0].fields|to_entries' <<< "$response"
+    jq --compact-output --monochrome-output '.projects[]|select(.key=="'${project}'")' <<< "$response"
 }
 export -f jira.projectInfo
 
@@ -197,25 +197,27 @@ function jira.search()
     local field fieldInfo json newName results
     local -a fields
 
-    fieldInfo="$(jira.fields)"
+    fieldInfo="$(jira.allfields)"
     # use 'jq' to return bash Associative arrays with the appropriate key/values
     mapfile -t fields < <(jq --compact-output --monochrome-output --raw-output '.[]|"[\"\(.name)\"]=\"\(.id)\""' <<< "$fieldInfo")
-    eval "fromFields=( "${fields[@]}" )"
+    [ "${#fields[*]}" -gt 0 ] && eval "fromFields=( "${fields[@]}" )"
 
     mapfile -t fields < <(jq --compact-output --monochrome-output --raw-output '.[]|"[\"\(.id)\"]=\"\(.name)\""' <<< "$fieldInfo")
-    eval "toFields=( "${fields[@]}" )"
+    [ "${#fields[*]}" -gt 0 ] && eval "toFields=( "${fields[@]}" )"
 
 
     maxResults=$(jq --compact-output --monochrome-output --raw-output '.maxResults // 0' <<< "$jql_json")
     startAt=$(jq --compact-output --monochrome-output --raw-output '.startAt // 0' <<< "$jql_json")
     count=$( jq --compact-output --monochrome-output --raw-output '.fields|length' <<< "$jql_json")
-    for (( i=0; i<$count; i++ )); do
-        field="$( jq --compact-output --monochrome-output --raw-output '.fields['"$i"']' <<< "$jql_json")"
-        newName="${fromFields[${field}]:-}"
-        [ "$newName" ] || continue
-        echo "field: $field -> $newName" >&2
-        jql_json=$(jq --compact-output --monochrome-output '.fields['"$i"']|="'"$newName"'"' <<< "$jql_json")
-    done
+    if [ "${#fromFields[*]}" -gt 0 ]; then
+        for (( i=0; i<$count; i++ )); do
+            field="$( jq --compact-output --monochrome-output --raw-output '.fields['"$i"']' <<< "$jql_json")"
+            newName="${fromFields[${field}]:-}"
+            [ "$newName" ] || continue
+            echo "field: $field -> $newName" >&2
+            jql_json=$(jq --compact-output --monochrome-output '.fields['"$i"']|="'"$newName"'"' <<< "$jql_json")
+        done
+    fi
     if [ $maxResults -eq 0 ]; then
         jql_json=$(jq --compact-output --monochrome-output '. + {maxResults:1000}' <<< "$jql_json")
         maxResults=1000
