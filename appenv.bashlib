@@ -190,6 +190,13 @@ function appenv.onExit()
 {
     local status=$?
 
+    set +o errexit
+    set +o nounset
+    trap - EXIT
+    trap - ERR
+    trap - INT
+    trap - PIPE 
+
     [ "$(type -t "${LIB_NAME}.onExit")" ] && "${LIB_NAME}.onExit"
 
     local base="$(basename "$LOGFILE")"
