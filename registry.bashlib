@@ -169,8 +169,7 @@ function registry.getCreateTime()
 
     local -r manifests="$(registry.manifest "$name" "${tags[0]}")"
     if [ "$manifests" ] && [[ ! $manifests =~ MANIFEST_INVALID ]]; then
-#        local fslayers=$(jq --compact-output --monochrome-output --raw-output 'try [ .fsLayers|length ]' <<< "$manifests")
-        local createTime=$(jq --compact-output --monochrome-output --raw-output 'try [ .history[].v1Compatibility.created | sub("\\.\\d+Z"; "Z") | fromdate] | max | todate' <<< "$manifests")
+        local createTime=$(jq --compact-output --monochrome-output --raw-output 'try [ .history[].v1Compatibility.created | sub("\\.\\d+.*$"; "Z") | fromdate] | max | todate' <<< "$manifests")
         if [ "$createTime" ]; then
             echo "$createTime"
             return 0
