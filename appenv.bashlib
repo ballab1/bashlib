@@ -116,14 +116,14 @@ function appenv.cmdLineArgs()
 
     [ "${OPTS['credentials']:-}" ] && export __SECRETS_FILE="${OPTS['credentials']}"
     [ "${OPTS['debug']:-0}" != 0 ] && export DEBUG=${OPTS['debug']:-0}
-    
+
 
 
     # put args into our global
     [ $# -ge 1 ] && ARGS=( "$@" )
 
-    if [ "${argsCondition:-}" ]; then
-        eval "[[ $argsCondition ]]" || trap.die 'invalid arguments!'
+    if [ "${OPTS['argsCondition']:-}" ]; then
+        eval "[[ ${OPTS['argsCondition']} ]]" || trap.die 'invalid arguments!'
     fi
 
     [ "${OPTS['cmd']:-}" ] || trap.die 'invalid arguments'
