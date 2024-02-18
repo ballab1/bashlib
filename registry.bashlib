@@ -63,12 +63,12 @@ function registry.digestsWithTimes()
 
     local -a tags
 
-    # get all the tags for current repo: "$name" 
+    # get all the tags for current repo: "$name"
     mapfile -t tags < <( registry.tags "$name" )
     [ "${#tags[*]}" -gt 0 ] || return 0
 
 
-    # get all the digests by tag for repo: "$name" 
+    # get all the digests by tag for repo: "$name"
     local tag digest
     local -A digests=()
     for tag in "${tags[@]}"; do
@@ -81,7 +81,7 @@ function registry.digestsWithTimes()
     done
 
 
-    # get the times of each digest for repo: "$name" 
+    # get the times of each digest for repo: "$name"
     local -A times
     for digest in "${!digests[@]}"; do
         # shellcheck disable=SC2206
@@ -196,7 +196,7 @@ function registry.getCreateTime()
         local -i i="${#tags[*]}"
         while [ "$i" -gt 2 ]; do
             i="$(( i - 1 ))"
-            echo '                    '"${tags[$i]}"    
+            echo '                    '"${tags[$i]}"
         done
     fi
     echo "    recommend verifying that this image can be downloaded using 'docker pull $(registry.SERVER)$name:${tags[0]}'"
@@ -246,7 +246,7 @@ function registry.io()
         [ "${DEBUG:-0}" -ne 0 ] && (echo '----------'; echo "$response" ; echo '----------'; echo )  >&2
         echo -n "$response"
 
-        #  Link: </v2/_catalog?last=thirdparty%2Fapm-server&n=100>; rel="next"
+        #  Link: </v2/_catalog?last=docker.io%2Fapm-server&n=100>; rel="next"
         text="$(grep -E '^Link:' "$headers")"
         [ "${text:-}" ]  || break
         eval links=( $(registry.getLinks "$text") )
